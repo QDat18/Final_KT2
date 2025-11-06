@@ -10,6 +10,7 @@
                 <div>
                     <img src="assets/images/logo1.png" alt="Logo Công Ty" style="height: 150px; width: 150px;">
                 </div>
+
                 <div>
                     <h1>Quản lý Sản phẩm</h1>
                     <nav aria-label="breadcrumb">
@@ -19,27 +20,33 @@
                         </ol>
                     </nav>
                 </div>
+                <div class="d-flex justify-content-end align-items-center mb-3">
+                    <button id="toggle-dark-mode" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-moon"></i> Dark Mode
+                    </button>
+                </div>
             </div>
         </div>
 
         <div class="d-flex gap-2">
             <div class="dropdown">
-                <button class="btn btn-success-modern dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-success-modern dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-file-download"></i> Xuất dữ liệu
                 </button>
-                <ul class="dropdown-menu">
+                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
                     <li>
                         <a class="dropdown-item" href="index.php?controller=product&action=export_template">
                             <i class="fas fa-file-alt me-2 text-secondary"></i> Tải Template
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item" href="index.php?controller=product&action=export_all">
+                        <a class="dropdown-item" href="index.php?controller=product&action=export_products">
                             <i class="fas fa-file-excel me-2 text-success"></i> Xuất toàn bộ sản phẩm
                         </a>
                     </li>
                 </ul>
             </div>
+
 
             <a href="index.php?controller=product&action=import" class="btn btn-info-modern">
                 <i class="fas fa-file-excel"></i> Import Excel
@@ -92,7 +99,7 @@
                     <input type="number"
                         id="max_price"
                         class="form-control"
-                        placeholder="999,999,999">
+                        placeholder="999 999 999">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">&nbsp;</label>

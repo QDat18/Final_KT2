@@ -849,7 +849,6 @@ switch ($action) {
         }
 
         $writer->save('php://output');
-        exit;
         break;
 
     case 'export_products':
@@ -910,16 +909,216 @@ switch ($action) {
         }
 
         // Generate filename
+        // $filename = 'products_export_' . date('Y-m-d_His') . '.xlsx';
+
+        // header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        // header('Content-Disposition: attachment;filename="' . $filename . '"');
+        // header('Cache-Control: max-age=0');
+
+        // $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        // $writer->save('php://output');
+        $exportDir = __DIR__ . '/../exports/';
+        if (!is_dir($exportDir)) {
+            mkdir($exportDir, 0777, true);
+        }
+
         $filename = 'products_export_' . date('Y-m-d_His') . '.xlsx';
-
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-
+        $filePath = $exportDir . $filename;
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        $writer->save('php://output');
+        $writer->save($filePath);
+
+        echo '
+        <!DOCTYPE html>
+        <html lang="vi">
+        <head>
+            <meta charset="UTF-8">
+            <title>Xuất sản phẩm thành công</title>
+            
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+            
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+            
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+            
+            <style>
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(15px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+
+                body {
+                    background-color: #f3f4f6;
+                    font-family: "Inter", sans-serif;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100vh;
+                    margin: 0;
+                }
+
+                .export-card {
+                    background: #fff;
+                    border-radius: 16px;
+                    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.07), 0 4px 6px -2px rgba(0,0,0,0.05);
+                    padding: 40px;
+                    text-align: center;
+                    max-width: 550px;
+                    width: 90%;
+                    animation: fadeIn 0.6s ease-out forwards;
+                }
+
+                .icon-success {
+                    font-size: 60px;
+                    color: #22c55e;
+                    margin-bottom: 20px;
+                }
+
+                .export-card h3 {
+                    color: #2563eb;
+                    font-weight: 700;
+                    font-size: 24px;
+                    margin-bottom: 15px;
+                }
+
+                .export-card p {
+                    color: #374151;
+                    font-size: 16px;
+                    line-height: 1.6;
+                }
+
+                .path-info {
+                    background: #f8f9fa;
+                    border: 1px solid #e9ecef;
+                    border-radius: 8px;
+                    padding: 15px 20px;
+                    margin-top: 25px;
+                    text-align: left;
+                }
+
+                .path-info p {
+                    font-size: 14px;
+                    color: #495057;
+                    margin-bottom: 5px;
+                }
+                
+                .path-info code {
+                    background: #e9ecef;
+                    color: #111827;
+                    padding: 4px 8px;
+                    border-radius: 6px;
+                    font-size: 15px;
+                    word-break: break-all;
+                }
+                
+                .button-group {
+                    margin-top: 30px;
+                    display: flex;
+                    justify-content: center;
+                    flex-wrap: wrap;
+                    gap: 12px;
+                }
+
+                .btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px 22px;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    transition: all 0.25s ease;
+                    text-decoration: none;
+                }
+
+                .btn-modern {
+                    background-color: #2563eb;
+                    color: #fff;
+                    border: 1px solid #2563eb;
+                }
+
+                .btn-modern:hover {
+                    background-color: #1e4fd6;
+                    border-color: #1e4fd6;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+                    color: #fff;
+                }
+                
+                .btn-outline-modern {
+                    background-color: #fff;
+                    color: #4b5563;
+                    border: 1px solid #d1d5db;
+                }
+                
+                .btn-outline-modern:hover {
+                    background-color: #f9fafb;
+                    border-color: #adb5bd;
+                    color: #1f2937;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+                }
+
+                .countdown {
+                    font-size: 14px;
+                    color: #6b7280;
+                    margin-top: 10px;
+                }
+            </style>
+        </head>
+        <body>
+
+            <div class="export-card fade-in">
+                <div class="icon-success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                
+                <h3>Xuất file thành công!</h3>
+                
+                <p>File báo cáo sản phẩm của bạn đã được tạo.</p>
+                
+                <div class="path-info">
+                    <p>Đã lưu tại:</p>
+                    <p><code>' . htmlspecialchars($filePath) . '</code></p>
+                </div>
+                
+                <div class="button-group">
+                    <a id="downloadBtn" href="exports/' . htmlspecialchars($filename) . '" class="btn btn-modern">
+                        <i class="fas fa-download"></i> Tải về (3s)
+                    </a>
+                    
+                    <a href="javascript:history.back()" class="btn btn-outline-modern">
+                        <i class="fas fa-arrow-left"></i> Quay lại
+                    </a>
+                </div>
+
+                <div class="countdown">Tự động tải xuống sau <span id="count">3</span> giây...</div>
+            </div>
+
+            <script>
+                let seconds = 3;
+                const countSpan = document.getElementById("count");
+                const btn = document.getElementById("downloadBtn");
+                const link = btn.getAttribute("href");
+
+                const countdown = setInterval(() => {
+                    seconds--;
+                    countSpan.textContent = seconds;
+                    btn.innerHTML = `<i class="fas fa-download"></i> Tải về (${seconds}s)`;
+                    if (seconds <= 0) {
+                        clearInterval(countdown);
+                        btn.innerHTML = `<i class="fas fa-download"></i> Đang tải...`;
+                        window.location.href = link;
+                    }
+                }, 1000);
+            </script>
+
+        </body>
+        </html>
+        ';
+
         break;
-    
+
     default:
         echo "404 - Action not found";
         break;

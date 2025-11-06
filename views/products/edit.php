@@ -89,23 +89,25 @@
                     <input type="hidden" name="controller" value="variant">
                     <input type="hidden" name="action" value="ajax_store">
                     <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
-                    <div class="row g-3">
+
+                    <div class="row g-3 align-items-end">
                         <div class="col-md-3">
                             <label class="form-label">Màu sắc <span class="text-danger">*</span></label>
                             <select name="color" class="form-select" required>
                                 <option value="" disabled selected>-- Chọn màu --</option>
                                 <?php foreach ($color_map as $name => list($bg_hex, $text_hex)): ?>
                                     <option value="<?php echo htmlspecialchars($name); ?>"
-                                        style="background-color: <?php echo $bg_hex; ?>; color: <?php echo $text_hex; ?>; font-weight: 500;">
+                                        style="background-color: <?php echo $bg_hex; ?>; color: <?php echo $text_hex; ?>;">
                                         <?php echo htmlspecialchars($name); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-3">
+
+                        <div class="col-md-2">
                             <label class="form-label">Dung lượng <span class="text-danger">*</span></label>
                             <select name="storage" class="form-select" required>
-                                <option value="" disabled selected>-- Chọn dung lượng --</option>
+                                <option value="" disabled selected>-- Chọn --</option>
                                 <?php foreach ($storage_options as $storage): ?>
                                     <option value="<?php echo htmlspecialchars($storage); ?>">
                                         <?php echo htmlspecialchars($storage); ?>
@@ -113,21 +115,31 @@
                                 <?php endforeach; ?>
                             </select>
                         </div>
+
                         <div class="col-md-2">
                             <label class="form-label">Giá <span class="text-danger">*</span></label>
                             <input type="number" name="price" class="form-control" placeholder="0" min="0" required>
                         </div>
+
                         <div class="col-md-2">
                             <label class="form-label">Tồn kho <span class="text-danger">*</span></label>
                             <input type="number" name="stock" class="form-control" placeholder="0" min="0" required>
                         </div>
+
                         <div class="col-md-2">
-                            <label class="form-label">&nbsp;</label>
+                            <label class="form-label">Ảnh biến thể</label>
+                            <input type="file" name="image" id="variant-image" class="form-control" accept="image/*">
+                        </div>
+
+                        <div class="col-md-1">
                             <button type="submit" class="btn btn-success-modern w-100">
                                 <i class="fas fa-plus"></i> Thêm
                             </button>
                         </div>
                     </div>
+
+                    <!-- Ảnh preview -->
+                    <div id="variant-preview" class="mt-2 text-center"></div>
                 </form>
             </div>
 
@@ -233,11 +245,13 @@
                         <div class="col-md-10">
                             <input type="file"
                                 id="image_url"
-                                name="image_url"
+                                name="image_url[]"
                                 class="form-control"
                                 accept="image/*"
+                                multiple
                                 required>
-                            <small class="form-text text-muted">Chọn file ảnh (JPG, PNG, GIF, WEBP - Max 5MB)</small>
+                            <small class="form-text text-muted">Chọn tối đa 5 ảnh (JPG, PNG, GIF, WEBP - Max 5MB/ảnh)</small>
+
                         </div>
                         <div class="col-md-2">
                             <button type="submit" class="btn btn-success-modern w-100">
@@ -415,9 +429,55 @@
         vertical-align: middle;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
+
+    #image-preview img {
+        transition: transform 0.2s ease;
+    }
+
+    #image-preview img:hover {
+        transform: scale(1.05);
+    }
 </style>
 
 <script>
+    $(document).ready(function() {
+        // Upload nhiều ảnh
+        $('#image-form').on('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+
+            $.ajax({
+                url: 'index.php?controller=image&action=ajax_store',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(res) {
+                    if (res.success) {
+                        Swal.fire({
+                            title: 'Thành công',
+                            text: res.message,
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+
+                        // 🧠 Ngăn trình duyệt re-submit khi F5
+                        window.history.replaceState({}, document.title, window.location.href);
+
+                        // Reset form sau khi upload
+                        $('#image-form')[0].reset();
+                    } else {
+                        Swal.fire('Lỗi', res.message, 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Lỗi', 'Không thể upload ảnh.', 'error');
+                }
+            });
+        });
+    });
+
     // Image preview for modal
     $(document).ready(function() {
         $('#edit-variant-image').on('change', function() {
@@ -433,5 +493,77 @@
                 $('#new-variant-image-preview').hide();
             }
         });
+    });
+    $(document).ready(function() {
+        // Hiển thị preview ảnh khi chọn file
+        $('#variant-image').on('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    $('#variant-preview').html(
+                        `<img src="${ev.target.result}" class="img-thumbnail" style="max-width:120px;">`
+                    );
+                };
+                reader.readAsDataURL(file);
+            } else {
+                $('#variant-preview').empty();
+            }
+        });
+
+        // Gửi AJAX thêm biến thể (kèm ảnh)
+        $('#variant-form').on('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+
+            $.ajax({
+                url: 'index.php?controller=variant&action=ajax_store',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(res) {
+                    if (res.success) {
+                        $('#variant-table-body').append(res.variant_html);
+                        $('#variant-form')[0].reset();
+                        $('#variant-preview').empty();
+                        Swal.fire('Thành công', res.message, 'success');
+                        $('#no-variants-row').remove();
+                    } else {
+                        Swal.fire('Lỗi', res.message, 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Lỗi', 'Không thể thêm biến thể.', 'error');
+                }
+            });
+        });
+    });
+
+    // Hiển thị preview nhiều ảnh trước khi upload
+    $('#image_url').on('change', function(e) {
+        const files = e.target.files;
+        const previewContainer = $('#image-preview');
+        previewContainer.remove(); // Xóa cũ
+        const preview = $('<div id="image-preview" class="row mt-3"></div>');
+        $(this).closest('.search-form-modern').append(preview);
+
+        if (files.length > 0) {
+            [...files].slice(0, 5).forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const col = $(`
+                    <div class="col-md-2 col-4 mb-2">
+                        <img src="${ev.target.result}" class="img-thumbnail" 
+                             style="width:100%; height:100px; object-fit:cover; border-radius:8px;">
+                    </div>
+                `);
+                    preview.append(col);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
     });
 </script>

@@ -1,6 +1,6 @@
 // File: assets/js/main.js
 
-$(document).ready(function() {
+$(document).ready(function () {
 
     // ========== Biến toàn cục ==========
     const loadingOverlay = $('.loading-overlay');
@@ -19,14 +19,14 @@ $(document).ready(function() {
             'warning': 'bg-warning',
             'info': 'bg-info'
         }[type] || 'bg-success';
-        
+
         const iconClass = {
             'success': 'fa-check-circle',
             'error': 'fa-exclamation-circle',
             'warning': 'fa-exclamation-triangle',
             'info': 'fa-info-circle'
         }[type] || 'fa-check-circle';
-        
+
         const toastHTML = `
             <div id="${toastId}" class="toast toast-modern align-items-center text-white ${bgClass} border-0" role="alert">
                 <div class="d-flex">
@@ -37,15 +37,15 @@ $(document).ready(function() {
                 </div>
             </div>
         `;
-        
+
         toastContainer.append(toastHTML);
         const toastEl = new bootstrap.Toast($('#' + toastId), {
             delay: 3000
         });
         toastEl.show();
-        
+
         // Tự động xóa sau khi ẩn
-        $('#' + toastId).on('hidden.bs.toast', function() {
+        $('#' + toastId).on('hidden.bs.toast', function () {
             $(this).remove();
         });
     }
@@ -71,21 +71,21 @@ $(document).ready(function() {
                 min_price: min_price,
                 max_price: max_price
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     // Cập nhật table body
                     tableBody.html(response.table_html);
-                    
+
                     // Cập nhật pagination
                     paginationContainer.html(response.pagination_html);
-                    
+
                     // Cập nhật số lượng sản phẩm
                     if (response.total_products !== undefined) {
                         productCount.html(`
                             <i class="fas fa-box"></i> ${response.total_products} sản phẩm
                         `);
                     }
-                    
+
                     // Smooth scroll to top
                     $('html, body').animate({
                         scrollTop: $('.modern-card').offset().top - 20
@@ -103,7 +103,7 @@ $(document).ready(function() {
                     `);
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 showToast('Lỗi kết nối. Vui lòng thử lại!', 'error');
                 tableBody.html(`
                     <tr>
@@ -118,7 +118,7 @@ $(document).ready(function() {
                 `);
                 console.error('AJAX Error:', error);
             },
-            complete: function() {
+            complete: function () {
                 loadingOverlay.fadeOut(200);
             }
         });
@@ -128,10 +128,10 @@ $(document).ready(function() {
     function deleteProduct(productId, productName, button) {
         const $button = $(button);
         const originalHTML = $button.html();
-        
+
         // Disable button và hiển thị spinner
         $button.prop('disabled', true)
-               .html('<i class="fas fa-spinner fa-spin"></i> Đang xóa...');
+            .html('<i class="fas fa-spinner fa-spin"></i> Đang xóa...');
 
         $.ajax({
             url: SITE_URL,
@@ -142,14 +142,14 @@ $(document).ready(function() {
                 action: 'ajax_delete',
                 id: productId
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     // Animation xóa row
                     $button.closest('tr').addClass('table-danger');
-                    setTimeout(function() {
-                        $button.closest('tr').fadeOut(400, function() {
+                    setTimeout(function () {
+                        $button.closest('tr').fadeOut(400, function () {
                             $(this).remove();
-                            
+
                             // Kiểm tra nếu không còn sản phẩm nào
                             if (tableBody.find('tr').length === 0) {
                                 tableBody.html(`
@@ -166,14 +166,14 @@ $(document).ready(function() {
                             }
                         });
                     }, 300);
-                    
+
                     showToast(response.message || 'Xóa sản phẩm thành công!', 'success');
                 } else {
                     showToast(response.message || 'Không thể xóa sản phẩm!', 'error');
                     $button.prop('disabled', false).html(originalHTML);
                 }
             },
-            error: function() {
+            error: function () {
                 showToast('Lỗi kết nối, không thể xóa!', 'error');
                 $button.prop('disabled', false).html(originalHTML);
             }
@@ -183,16 +183,16 @@ $(document).ready(function() {
     // ========== Event Handlers ==========
 
     // 1. Form search submit
-    searchForm.on('submit', function(e) {
+    searchForm.on('submit', function (e) {
         e.preventDefault();
         loadProducts(1); // Reset về trang 1
     });
 
     // 2. Realtime search (debounce)
     let searchTimeout;
-    $('#search').on('input', function() {
+    $('#search').on('input', function () {
         clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(function() {
+        searchTimeout = setTimeout(function () {
             if ($('#search').val().length >= 3 || $('#search').val().length === 0) {
                 loadProducts(1);
             }
@@ -200,31 +200,31 @@ $(document).ready(function() {
     });
 
     // 3. Price filter change
-    $('#min_price, #max_price').on('change', function() {
+    $('#min_price, #max_price').on('change', function () {
         loadProducts(1);
     });
 
     // 4. Pagination click
-    $(document).on('click', '#pagination-container .page-link', function(e) {
+    $(document).on('click', '#pagination-container .page-link', function (e) {
         e.preventDefault();
-        
+
         const href = $(this).attr('href');
         if (!href || href === '#') return;
-        
+
         const urlParams = new URLSearchParams(href.split('?')[1]);
         const page = urlParams.get('page') || 1;
-        
+
         loadProducts(page);
     });
 
     // 5. Delete button click
-    $(document).on('click', '.btn-delete-product', function(e) {
+    $(document).on('click', '.btn-delete-product', function (e) {
         e.preventDefault();
-        
+
         const productId = $(this).data('id');
         const productName = $(this).data('name');
         const button = this;
-        
+
         // SweetAlert2 or native confirm
         if (typeof Swal !== 'undefined') {
             Swal.fire({
@@ -249,7 +249,7 @@ $(document).ready(function() {
     });
 
     // 6. Keyboard shortcuts
-    $(document).on('keydown', function(e) {
+    $(document).on('keydown', function (e) {
         // Ctrl/Cmd + K = Focus search
         if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
             e.preventDefault();
@@ -265,14 +265,39 @@ $(document).ready(function() {
     $('#search').attr('placeholder', 'Tìm kiếm (Ctrl+K)...');
 
     // Add smooth scrolling
-    $('a[href^="#"]').on('click', function(e) {
+    $('a[href^="#"]').on('click', function (e) {
         const target = $(this.getAttribute('href'));
-        if(target.length) {
+        if (target.length) {
             e.preventDefault();
             $('html, body').stop().animate({
                 scrollTop: target.offset().top - 20
             }, 400);
         }
+    });
+
+
+    $(document).ready(function () {
+        const darkModeBtn = $('#toggle-dark-mode');
+        const isDark = localStorage.getItem('darkMode') === 'true';
+
+        // Áp dụng theme khi load lại trang
+        if (isDark) {
+            $('body').addClass('dark-mode');
+            darkModeBtn.html('<i class="fas fa-sun"></i> Light Mode');
+        }
+
+        // Toggle dark mode khi bấm
+        darkModeBtn.on('click', function () {
+            $('body').toggleClass('dark-mode');
+            const enabled = $('body').hasClass('dark-mode');
+            localStorage.setItem('darkMode', enabled);
+
+            if (enabled) {
+                darkModeBtn.html('<i class="fas fa-sun"></i> Light Mode');
+            } else {
+                darkModeBtn.html('<i class="fas fa-moon"></i> Dark Mode');
+            }
+        });
     });
 
     console.log('✅ Product Management System Initialized');
