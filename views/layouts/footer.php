@@ -11,35 +11,35 @@
                 <div class="footer-member">
                     <h6>Hoàng Quang Đạt</h6>
                     <img src="assets/images/team/hsq5.png" alt="Hoàng Quang Đạt" class="img-fluid rounded-circle mb-2" style="width: 80px; height: 80px; object-fit: cover;">
-                    <p class="text-muted small">Leader / Back-end</p>
+                    <p class="text-muted small">Leader / Back-end / Frontend</p>
                 </div>
             </div>
             <div class="col-lg-2 col-md-4 col-sm-6">
                 <div class="footer-member">
                     <h6>Nguyễn Mạnh Thắng</h6>
                     <img src="assets/images/team/hsq4.jpg" alt="Nguyễn Mạnh Thắng" class="img-fluid rounded-circle mb-2" style="width: 80px; height: 80px; object-fit: cover;">
-                    <p class="text-muted small">Front-end / UI/UX</p>
+                    <p class="text-muted small">Import / Export / Search</p>
                 </div>
             </div>
             <div class="col-lg-2 col-md-4 col-sm-6">
                 <div class="footer-member">
                     <h6>Nguyễn Quang Duy</h6>
                     <img src="assets/images/team/hsq3.jpg" alt="Nguyễn Quang Duy" class="img-fluid rounded-circle mb-2" style="width: 80px; height: 80px; object-fit: cover;">
-                    <p class="text-muted small">Back-end / Database</p>
+                    <p class="text-muted small">Database Design / Delete Products</p>
                 </div>
             </div>
             <div class="col-lg-2 col-md-4 col-sm-6">
                 <div class="footer-member">
                     <h6>Hoàng Gia Khiêm</h6>
                     <img src="assets/images/team/hsq2.jpg" alt="Hoàng Gia Khiêm" class="img-fluid rounded-circle mb-2" style="width: 80px; height: 80px; object-fit: cover;">
-                    <p class="text-muted small">Tester / Báo cáo</p>
+                    <p class="text-muted small">Tester / Create Products</p>
                 </div>
             </div>
             <div class="col-lg-2 col-md-4 col-sm-6">
                 <div class="footer-member">
-                    <h6>Đặng Phương Anh</h6>
+                    <h6>Đặng Trường Duy</h6>
                     <img src="assets/images/team/hsq1.jpg" alt="Đặng Diem My" class="img-fluid rounded-circle mb-2" style="width: 80px; height: 80px; object-fit: cover;">
-                    <p class="text-muted small">Front-end</p>
+                    <p class="text-muted small">Resources / Database / Update Products</p>
                 </div>
             </div>
         </div>
