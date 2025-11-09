@@ -66,6 +66,5 @@
         echo '<script src="' . $page_js_file . '"></script>';
     }
 ?>
-    
 </body>
 </html>

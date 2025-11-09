@@ -19,6 +19,7 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="assets/js/darkmode.js"></script>
 </head>
 
 <body style="font-family: 'Inter', sans-serif;">
@@ -48,3 +49,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
+        <div class="d-flex justify-content-end align-items-center mb-3">
+            <button id="toggle-dark-mode" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-moon"></i> Dark Mode
+            </button>
+        </div>

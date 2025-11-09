@@ -20,11 +20,7 @@
                         </ol>
                     </nav>
                 </div>
-                <div class="d-flex justify-content-end align-items-center mb-3">
-                    <button id="toggle-dark-mode" class="btn btn-outline-secondary btn-sm">
-                        <i class="fas fa-moon"></i> Dark Mode
-                    </button>
-                </div>
+
             </div>
         </div>
 

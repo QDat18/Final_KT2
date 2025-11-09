@@ -4,11 +4,67 @@
 $product_id = $_REQUEST['product_id'] ?? 0;
 $redirect_url = "Location: index.php?controller=product&action=edit&id=" . $product_id;
 
+// Helper function to remove Vietnamese accents
+function removeVietnameseAccents($str) {
+    $vietnamese = [
+        'à', 'á', 'ạ', 'ả', 'ã', 'â', 'ầ', 'ấ', 'ậ', 'ẩ', 'ẫ', 'ă', 'ằ', 'ắ', 'ặ', 'ẳ', 'ẵ',
+        'è', 'é', 'ẹ', 'ẻ', 'ẽ', 'ê', 'ề', 'ế', 'ệ', 'ể', 'ễ',
+        'ì', 'í', 'ị', 'ỉ', 'ĩ',
+        'ò', 'ó', 'ọ', 'ỏ', 'õ', 'ô', 'ồ', 'ố', 'ộ', 'ổ', 'ỗ', 'ơ', 'ờ', 'ớ', 'ợ', 'ở', 'ỡ',
+        'ù', 'ú', 'ụ', 'ủ', 'ũ', 'ư', 'ừ', 'ứ', 'ự', 'ử', 'ữ',
+        'ỳ', 'ý', 'ỵ', 'ỷ', 'ỹ',
+        'đ',
+        'À', 'Á', 'Ạ', 'Ả', 'Ã', 'Â', 'Ầ', 'Ấ', 'Ậ', 'Ẩ', 'Ẫ', 'Ă', 'Ằ', 'Ắ', 'Ặ', 'Ẳ', 'Ẵ',
+        'È', 'É', 'Ẹ', 'Ẻ', 'Ẽ', 'Ê', 'Ề', 'Ế', 'Ệ', 'Ể', 'Ễ',
+        'Ì', 'Í', 'Ị', 'Ỉ', 'Ĩ',
+        'Ò', 'Ó', 'Ọ', 'Ỏ', 'Õ', 'Ô', 'Ồ', 'Ố', 'Ộ', 'Ổ', 'Ỗ', 'Ơ', 'Ờ', 'Ớ', 'Ợ', 'Ở', 'Ỡ',
+        'Ù', 'Ú', 'Ụ', 'Ủ', 'Ũ', 'Ư', 'Ừ', 'Ứ', 'Ự', 'Ử', 'Ữ',
+        'Ỳ', 'Ý', 'Ỵ', 'Ỷ', 'Ỹ',
+        'Đ'
+    ];
+    
+    $latin = [
+        'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a',
+        'e', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'e',
+        'i', 'i', 'i', 'i', 'i',
+        'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o',
+        'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u',
+        'y', 'y', 'y', 'y', 'y',
+        'd',
+        'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A',
+        'E', 'E', 'E', 'E', 'E', 'E', 'E', 'E', 'E', 'E', 'E',
+        'I', 'I', 'I', 'I', 'I',
+        'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O',
+        'U', 'U', 'U', 'U', 'U', 'U', 'U', 'U', 'U', 'U', 'U',
+        'Y', 'Y', 'Y', 'Y', 'Y',
+        'D'
+    ];
+    
+    return str_replace($vietnamese, $latin, $str);
+}
+
+// Color mapping for SKU generation
+$color_map_sku = [
+    'Đen' => 'BLACK',
+    'Trắng' => 'WHITE',
+    'Bạc' => 'SILVER',
+    'Xám' => 'GRAY',
+    'Titan Tự nhiên' => 'NATURAL',
+    'Vàng' => 'GOLD',
+    'Đỏ' => 'RED',
+    'Xanh Dương' => 'BLUE',
+    'Xanh Lá' => 'GREEN',
+    'Tím' => 'PURPLE',
+    'Hồng' => 'PINK',
+    'Beige' => 'BEIGE',
+    'Platinum' => 'PLATINUM',
+];
+
 switch ($action) {
     // ========== AJAX CREATE VARIANT ==========
     case 'ajax_store':
         header('Content-Type: application/json');
-        
+
         try {
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('Invalid request method');
@@ -19,8 +75,8 @@ switch ($action) {
                 throw new Exception('Sản phẩm không tồn tại');
             }
 
-            $color = sanitizeString($_POST['color'] ?? '');
-            $storage = sanitizeString($_POST['storage'] ?? '');
+            $color = trim(sanitizeString($_POST['color'] ?? ''));
+            $storage = trim(sanitizeString($_POST['storage'] ?? ''));
             $price = filter_var($_POST['price'] ?? 0, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
             $stock = filter_var($_POST['stock'] ?? 0, FILTER_SANITIZE_NUMBER_INT);
 
@@ -35,48 +91,48 @@ switch ($action) {
                 throw new Exception(implode(', ', $errors));
             }
 
-            // Generate SKU - FIX: Remove Vietnamese characters properly
+            // Generate SKU
             $product_sku = $product['sku'];
             
-            // Clean color name: remove Vietnamese marks and convert to proper format
-            $color_clean = str_replace(
-                ['Đ', 'đ', 'Á', 'á', 'À', 'à', 'Ả', 'ả', 'Ã', 'ã', 'Ạ', 'ạ', 
-                 'Ă', 'ă', 'Ắ', 'ắ', 'Ằ', 'ằ', 'Ẳ', 'ẳ', 'Ẵ', 'ẵ', 'Ặ', 'ặ',
-                 'Â', 'â', 'Ấ', 'ấ', 'Ầ', 'ầ', 'Ẩ', 'ẩ', 'Ẫ', 'ẫ', 'Ậ', 'ậ',
-                 'É', 'é', 'È', 'è', 'Ẻ', 'ẻ', 'Ẽ', 'ẽ', 'Ẹ', 'ẹ',
-                 'Ê', 'ê', 'Ế', 'ế', 'Ề', 'ề', 'Ể', 'ể', 'Ễ', 'ễ', 'Ệ', 'ệ',
-                 'Í', 'í', 'Ì', 'ì', 'Ỉ', 'ỉ', 'Ĩ', 'ĩ', 'Ị', 'ị',
-                 'Ó', 'ó', 'Ò', 'ò', 'Ỏ', 'ỏ', 'Õ', 'õ', 'Ọ', 'ọ',
-                 'Ô', 'ô', 'Ố', 'ố', 'Ồ', 'ồ', 'Ổ', 'ổ', 'Ỗ', 'ỗ', 'Ộ', 'ộ',
-                 'Ơ', 'ơ', 'Ớ', 'ớ', 'Ờ', 'ờ', 'Ở', 'ở', 'Ỡ', 'ỡ', 'Ợ', 'ợ',
-                 'Ú', 'ú', 'Ù', 'ù', 'Ủ', 'ủ', 'Ũ', 'ũ', 'Ụ', 'ụ',
-                 'Ư', 'ư', 'Ứ', 'ứ', 'Ừ', 'ừ', 'Ử', 'ử', 'Ữ', 'ữ', 'Ự', 'ự',
-                 'Ý', 'ý', 'Ỳ', 'ỳ', 'Ỷ', 'ỷ', 'Ỹ', 'ỹ', 'Ỵ', 'ỵ', ' '],
-                ['D', 'd', 'A', 'a', 'A', 'a', 'A', 'a', 'A', 'a', 'A', 'a',
-                 'A', 'a', 'A', 'a', 'A', 'a', 'A', 'a', 'A', 'a', 'A', 'a',
-                 'A', 'a', 'A', 'a', 'A', 'a', 'A', 'a', 'A', 'a', 'A', 'a',
-                 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e',
-                 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e',
-                 'I', 'i', 'I', 'i', 'I', 'i', 'I', 'i', 'I', 'i',
-                 'O', 'o', 'O', 'o', 'O', 'o', 'O', 'o', 'O', 'o',
-                 'O', 'o', 'O', 'o', 'O', 'o', 'O', 'o', 'O', 'o', 'O', 'o',
-                 'O', 'o', 'O', 'o', 'O', 'o', 'O', 'o', 'O', 'o', 'O', 'o',
-                 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u',
-                 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u',
-                 'Y', 'y', 'Y', 'y', 'Y', 'y', 'Y', 'y', 'Y', 'y', ''],
-                $color
-            );
-            $color_slug = ucfirst(strtolower($color_clean));
-            
-            // Extract numbers from storage
-            preg_match('/(\d+)/', $storage, $matches);
-            $storage_slug = $matches[1] ?? str_replace(' ', '', $storage);
-            
+            // Use predefined mapping or convert color name
+            if (isset($color_map_sku[$color])) {
+                $color_slug = $color_map_sku[$color];
+            } else {
+                $color_clean = removeVietnameseAccents($color);
+                $color_slug = strtoupper(str_replace(' ', '', $color_clean));
+            }
+
+            // Remove spaces from storage
+            $storage_slug = str_replace(' ', '', $storage);
+
             $generated_sku = $product_sku . '-' . $color_slug . '-' . $storage_slug;
 
-            // Check if SKU exists
+            // Normalize input data
+            $color = trim($color);
+            $storage = trim($storage);
+
+            // Check if variant already exists (case-insensitive, ignore spaces)
+            $existing = $variantModel->findByProductColorStorage($product_id, $color, $storage);
+            
+            if ($existing) {
+                // Highlight the existing variant
+                echo json_encode([
+                    'success' => false, 
+                    'message' => "⚠️ Biến thể màu <strong>{$color}</strong> - dung lượng <strong>{$storage}</strong> đã tồn tại!<br>Vui lòng chỉnh sửa biến thể hiện có thay vì thêm mới.",
+                    'type' => 'warning',
+                    'existing_id' => $existing['id']
+                ]);
+                exit; 
+            }
+
+            // Double check SKU
             if ($variantModel->findBySKU($generated_sku)) {
-                throw new Exception("Biến thể {$generated_sku} đã tồn tại");
+                echo json_encode([
+                    'success' => false, 
+                    'message' => "SKU {$generated_sku} đã tồn tại trong hệ thống!",
+                    'type' => 'warning'
+                ]);
+                exit; 
             }
 
             $data = [
@@ -91,24 +147,38 @@ switch ($action) {
 
             // Handle image upload
             if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
-                $target_dir = "uploads/variants/";
-                if (!is_dir($target_dir)) {
-                    mkdir($target_dir, 0777, true);
+                $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                $file_type = $_FILES['image']['type'];
+                
+                if (!in_array($file_type, $allowed_types)) {
+                    throw new Exception('Chỉ chấp nhận file ảnh (JPG, PNG, GIF, WEBP)');
                 }
                 
-                $file_extension = pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION);
-                $new_file_name = uniqid() . '.' . $file_extension;
+                $max_size = 5 * 1024 * 1024; // 5MB
+                if ($_FILES['image']['size'] > $max_size) {
+                    throw new Exception('Kích thước file không được vượt quá 5MB');
+                }
+
+                $target_dir = "uploads/variants/";
+                if (!is_dir($target_dir)) {
+                    mkdir($target_dir, 0755, true);
+                }
+
+                $file_extension = strtolower(pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION));
+                $new_file_name = uniqid('variant_', true) . '.' . $file_extension;
                 $target_file = $target_dir . $new_file_name;
 
                 if (move_uploaded_file($_FILES["image"]["tmp_name"], $target_file)) {
                     $data['image'] = $target_file;
+                } else {
+                    throw new Exception('Upload ảnh thất bại');
                 }
             }
 
             if ($variantModel->create($data)) {
                 $new_variant_id = $db->lastInsertId();
                 $new_variant = $variantModel->getByID($new_variant_id);
-                
+
                 // Color map for display
                 $color_map = [
                     'Đen' => '#000000',
@@ -121,18 +191,20 @@ switch ($action) {
                     'Xanh Dương' => '#3498DB',
                     'Xanh Lá' => '#2ECC71',
                     'Tím' => '#9B59B6',
-                    'Hồng' => '#FADADD'
+                    'Hồng' => '#FFC0CB',
+                    'Beige' => '#F5F5DC',
+                    'Platinum' => '#E5E4E2'
                 ];
-                
+
                 // Get color hex
-                $bg_hex = $color_map[$new_variant['color']] ?? '#FFFFFF';
+                $bg_hex = $color_map[$new_variant['color']] ?? '#CCCCCC';
                 $border = ($bg_hex == '#FFFFFF') ? 'border: 1px solid #ccc;' : '';
-                
+
                 // Generate HTML for the new row
-                $image = !empty($new_variant['image']) 
-                    ? '<img src="' . htmlspecialchars($new_variant['image']) . '" class="variant-thumbnail">'
+                $image = !empty($new_variant['image'])
+                    ? '<img src="' . htmlspecialchars($new_variant['image']) . '" class="variant-thumbnail" alt="Variant image">'
                     : '<i class="fas fa-image text-muted"></i>';
-                
+
                 $variant_html = '
                     <tr id="variant-' . $new_variant_id . '" class="fade-in">
                         <td id="variant-image-wrapper-' . $new_variant_id . '">' . $image . '</td>
@@ -144,12 +216,12 @@ switch ($action) {
                         <td>' . htmlspecialchars($new_variant['storage']) . '</td>
                         <td>
                             <span id="variant-price-' . $new_variant_id . '">
-                                ' . number_format($new_variant['price']) . ' đ
+                                ' . number_format($new_variant['price'], 0, ',', '.') . ' đ
                             </span>
                         </td>
                         <td>
                             <span id="variant-stock-' . $new_variant_id . '">
-                                ' . $new_variant['stock'] . '
+                                ' . number_format($new_variant['stock']) . '
                             </span>
                         </td>
                         <td>
@@ -179,9 +251,8 @@ switch ($action) {
                     'variant_id' => $new_variant_id
                 ]);
             } else {
-                throw new Exception('Không thể tạo biến thể');
+                throw new Exception('Thêm biến thể thất bại');
             }
-
         } catch (Exception $e) {
             http_response_code(400);
             echo json_encode([
@@ -194,12 +265,13 @@ switch ($action) {
     // ========== AJAX UPDATE VARIANT ==========
     case 'ajax_update':
         header('Content-Type: application/json');
-        
+
         try {
             $id = (int)($_POST['id'] ?? 0);
             $price = filter_var($_POST['price'] ?? 0, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
             $stock = filter_var($_POST['stock'] ?? 0, FILTER_SANITIZE_NUMBER_INT);
 
+            if ($id <= 0) throw new Exception('ID không hợp lệ');
             if ($price <= 0) throw new Exception('Giá không hợp lệ');
             if ($stock < 0) throw new Exception('Tồn kho không hợp lệ');
 
@@ -209,25 +281,39 @@ switch ($action) {
             }
 
             $image_url = $existing_variant['image'];
-            
+
             // Handle image upload if present
             if (isset($_FILES['variant_image']) && $_FILES['variant_image']['error'] == 0) {
+                $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                $file_type = $_FILES['variant_image']['type'];
+                
+                if (!in_array($file_type, $allowed_types)) {
+                    throw new Exception('Chỉ chấp nhận file ảnh (JPG, PNG, GIF, WEBP)');
+                }
+                
+                $max_size = 5 * 1024 * 1024; // 5MB
+                if ($_FILES['variant_image']['size'] > $max_size) {
+                    throw new Exception('Kích thước file không được vượt quá 5MB');
+                }
+
                 // Delete old image if exists
                 if (!empty($image_url) && file_exists($image_url)) {
-                    unlink($image_url);
+                    @unlink($image_url);
                 }
-                
+
                 $target_dir = "uploads/variants/";
                 if (!is_dir($target_dir)) {
-                    mkdir($target_dir, 0777, true);
+                    mkdir($target_dir, 0755, true);
                 }
-                
-                $file_extension = pathinfo($_FILES["variant_image"]["name"], PATHINFO_EXTENSION);
-                $new_file_name = uniqid() . '.' . $file_extension;
+
+                $file_extension = strtolower(pathinfo($_FILES["variant_image"]["name"], PATHINFO_EXTENSION));
+                $new_file_name = uniqid('variant_', true) . '.' . $file_extension;
                 $target_file = $target_dir . $new_file_name;
 
                 if (move_uploaded_file($_FILES["variant_image"]["tmp_name"], $target_file)) {
                     $image_url = $target_file;
+                } else {
+                    throw new Exception('Upload ảnh thất bại');
                 }
             }
 
@@ -245,14 +331,13 @@ switch ($action) {
                 echo json_encode([
                     'success' => true,
                     'message' => 'Cập nhật biến thể thành công!',
-                    'price' => number_format($price) . ' đ',
-                    'stock' => $stock,
+                    'price' => number_format($price, 0, ',', '.') . ' đ',
+                    'stock' => number_format($stock),
                     'image_url' => $image_url
                 ]);
             } else {
                 throw new Exception('Cập nhật thất bại');
             }
-
         } catch (Exception $e) {
             http_response_code(400);
             echo json_encode([
@@ -265,10 +350,14 @@ switch ($action) {
     // ========== AJAX DELETE VARIANT ==========
     case 'ajax_delete':
         header('Content-Type: application/json');
-        
+
         try {
             $id = (int)($_POST['id'] ?? $_GET['id'] ?? 0);
-            
+
+            if ($id <= 0) {
+                throw new Exception('ID không hợp lệ');
+            }
+
             $variant = $variantModel->getByID($id);
             if (!$variant) {
                 throw new Exception('Biến thể không tồn tại');
@@ -276,7 +365,7 @@ switch ($action) {
 
             // Delete image file if exists
             if (!empty($variant['image']) && file_exists($variant['image'])) {
-                unlink($variant['image']);
+                @unlink($variant['image']);
             }
 
             if ($variantModel->delete($id)) {
@@ -287,7 +376,6 @@ switch ($action) {
             } else {
                 throw new Exception('Xóa biến thể thất bại');
             }
-
         } catch (Exception $e) {
             http_response_code(400);
             echo json_encode([
@@ -308,8 +396,8 @@ switch ($action) {
                 exit;
             }
 
-            $color = sanitizeString($_POST['color'] ?? '');
-            $storage = sanitizeString($_POST['storage'] ?? '');
+            $color = trim(sanitizeString($_POST['color'] ?? ''));
+            $storage = trim(sanitizeString($_POST['storage'] ?? ''));
             $price = filter_var($_POST['price'] ?? 0, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
             $stock = filter_var($_POST['stock'] ?? 0, FILTER_SANITIZE_NUMBER_INT);
 
@@ -320,11 +408,17 @@ switch ($action) {
 
             if (empty($errors)) {
                 $product_sku = $product['sku'];
-                $color_slug = ucfirst(strtolower($color));
-                preg_match('/(\d+)/', $storage, $matches);
-                $storage_slug = $matches[1] ?? $storage;
-                $generated_sku = $product_sku . '-' . $color_slug . '-' . $storage_slug;
                 
+                if (isset($color_map_sku[$color])) {
+                    $color_slug = $color_map_sku[$color];
+                } else {
+                    $color_clean = removeVietnameseAccents($color);
+                    $color_slug = strtoupper(str_replace(' ', '', $color_clean));
+                }
+                
+                $storage_slug = str_replace(' ', '', $storage);
+                $generated_sku = $product_sku . '-' . $color_slug . '-' . $storage_slug;
+
                 if ($variantModel->findBySKU($generated_sku)) {
                     $errors[] = "Biến thể {$generated_sku} đã tồn tại.";
                 } else {
@@ -337,15 +431,22 @@ switch ($action) {
                         'stock' => $stock,
                         'image' => ''
                     ];
-                    
+
                     if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
                         $target_dir = "uploads/variants/";
-                        $target_file = $target_dir . basename($_FILES["image"]["name"]);
+                        if (!is_dir($target_dir)) {
+                            mkdir($target_dir, 0755, true);
+                        }
+                        
+                        $file_extension = strtolower(pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION));
+                        $new_file_name = uniqid('variant_', true) . '.' . $file_extension;
+                        $target_file = $target_dir . $new_file_name;
+                        
                         if (move_uploaded_file($_FILES["image"]["tmp_name"], $target_file)) {
                             $data['image'] = $target_file;
                         }
                     }
-                    
+
                     if ($variantModel->create($data)) {
                         $_SESSION['success_message'] = "Thêm biến thể thành công!";
                     } else {
@@ -353,7 +454,7 @@ switch ($action) {
                     }
                 }
             }
-            
+
             if (!empty($errors)) {
                 $_SESSION['error_message'] = implode('<br>', $errors);
             }
@@ -368,25 +469,30 @@ switch ($action) {
             $price = filter_var($_POST['price'] ?? 0, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
             $stock = filter_var($_POST['stock'] ?? 0, FILTER_SANITIZE_NUMBER_INT);
 
+            if ($id <= 0) $errors[] = "ID không hợp lệ";
             if ($price <= 0) $errors[] = "Giá không hợp lệ";
             if ($stock < 0) $errors[] = "Tồn kho không hợp lệ";
 
             if (empty($errors)) {
                 $existing_variant = $variantModel->getByID($id);
-                $data = [
-                    'id' => $id,
-                    'sku' => $existing_variant['sku'],
-                    'color' => $existing_variant['color'],
-                    'storage' => $existing_variant['storage'],
-                    'price' => $price,
-                    'stock' => $stock,
-                    'image' => $existing_variant['image']
-                ];
-
-                if ($variantModel->update($data)) {
-                    $_SESSION['success_message'] = "Cập nhật biến thể thành công!";
+                if (!$existing_variant) {
+                    $_SESSION['error_message'] = "Biến thể không tồn tại.";
                 } else {
-                    $_SESSION['error_message'] = "Cập nhật biến thể thất bại.";
+                    $data = [
+                        'id' => $id,
+                        'sku' => $existing_variant['sku'],
+                        'color' => $existing_variant['color'],
+                        'storage' => $existing_variant['storage'],
+                        'price' => $price,
+                        'stock' => $stock,
+                        'image' => $existing_variant['image']
+                    ];
+
+                    if ($variantModel->update($data)) {
+                        $_SESSION['success_message'] = "Cập nhật biến thể thành công!";
+                    } else {
+                        $_SESSION['error_message'] = "Cập nhật biến thể thất bại.";
+                    }
                 }
             } else {
                 $_SESSION['error_message'] = implode('<br>', $errors);
@@ -397,10 +503,20 @@ switch ($action) {
 
     case 'delete':
         $id = (int)($_GET['id'] ?? 0);
-        if ($variantModel->delete($id)) {
-            $_SESSION['success_message'] = "Xóa biến thể thành công!";
+        
+        if ($id <= 0) {
+            $_SESSION['error_message'] = "ID không hợp lệ.";
         } else {
-            $_SESSION['error_message'] = "Xóa biến thể thất bại.";
+            $variant = $variantModel->getByID($id);
+            if ($variant && !empty($variant['image']) && file_exists($variant['image'])) {
+                @unlink($variant['image']);
+            }
+            
+            if ($variantModel->delete($id)) {
+                $_SESSION['success_message'] = "Xóa biến thể thành công!";
+            } else {
+                $_SESSION['error_message'] = "Xóa biến thể thất bại.";
+            }
         }
         header($redirect_url);
         break;

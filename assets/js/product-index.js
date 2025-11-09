@@ -275,31 +275,5 @@ $(document).ready(function () {
         }
     });
 
-
-    const darkModeBtn = $('#toggle-dark-mode');
-
-    if (darkModeBtn.length) {
-        const isDark = localStorage.getItem('darkMode') === 'true';
-
-        if (isDark) {
-            $('body').addClass('dark-mode');
-            darkModeBtn.html('<i class="fas fa-sun"></i> Light Mode');
-        } else {
-            darkModeBtn.html('<i class="fas fa-moon"></i> Dark Mode');
-        }
-
-        darkModeBtn.on('click', function () {
-            $('body').toggleClass('dark-mode');
-            const enabled = $('body').hasClass('dark-mode');
-            localStorage.setItem('darkMode', enabled);
-
-            if (enabled) {
-                darkModeBtn.html('<i class="fas fa-sun"></i> Light Mode');
-            } else {
-                darkModeBtn.html('<i class="fas fa-moon"></i> Dark Mode');
-            }
-        });
-    }
-
     console.log('✅ Product Management System Initialized');
 });

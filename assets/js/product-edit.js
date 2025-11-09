@@ -19,21 +19,57 @@ $(document).ready(function () {
         'Xanh Dương': '#3498DB',
         'Xanh Lá': '#2ECC71',
         'Tím': '#9B59B6',
-        'Hồng': '#FADADD'
+        'Hồng': '#FFC0CB',
+        'Beige': '#F5F5DC',
+        'Platinum': '#E5E4E2'
     };
 
     // ========== TOAST NOTIFICATION ==========
-    const showToast = (message, isSuccess = true) => {
+    const showToast = (message, icon = 'success') => {
+        // Xử lý để tương thích ngược với (message, true) hoặc (message, false)
+        if (icon === true) icon = 'success';
+        if (icon === false) icon = 'error';
+
         Swal.fire({
             toast: true,
             position: 'top-end',
-            icon: isSuccess ? 'success' : 'error',
+            icon: icon,
             title: message,
             showConfirmButton: false,
             timer: 3000,
             timerProgressBar: true
         });
-    }
+    };
+
+    // ========== HELPER FUNCTIONS ==========
+    
+    // Format số tiền
+    const formatPrice = (price) => {
+        return new Intl.NumberFormat('vi-VN').format(price) + ' đ';
+    };
+
+    // Format số lượng
+    const formatNumber = (number) => {
+        return new Intl.NumberFormat('vi-VN').format(number);
+    };
+
+    // Validate file ảnh
+    const validateImageFile = (file) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        const maxSize = 5 * 1024 * 1024; // 5MB
+
+        if (!allowedTypes.includes(file.type)) {
+            showToast('Chỉ chấp nhận file ảnh JPG, PNG, GIF, WEBP!', 'error');
+            return false;
+        }
+
+        if (file.size > maxSize) {
+            showToast('Kích thước file không được vượt quá 5MB!', 'error');
+            return false;
+        }
+
+        return true;
+    };
 
     // ========== VARIANT MANAGEMENT ==========
 
@@ -44,6 +80,33 @@ $(document).ready(function () {
         const $form = $(this);
         const $submitButton = $form.find('button[type="submit"]');
         const originalButtonHtml = $submitButton.html();
+
+        // Validate inputs
+        const color = $form.find('[name="color"]').val().trim();
+        const storage = $form.find('[name="storage"]').val().trim();
+        const price = parseFloat($form.find('[name="price"]').val());
+        const stock = parseInt($form.find('[name="stock"]').val());
+
+        if (!color || !storage) {
+            showToast('Vui lòng điền đầy đủ màu sắc và dung lượng!', 'error');
+            return;
+        }
+
+        if (isNaN(price) || price <= 0) {
+            showToast('Giá không hợp lệ!', 'error');
+            return;
+        }
+
+        if (isNaN(stock) || stock < 0) {
+            showToast('Tồn kho không hợp lệ!', 'error');
+            return;
+        }
+
+        // Validate image if exists
+        const imageFile = $form.find('[name="image"]')[0]?.files[0];
+        if (imageFile && !validateImageFile(imageFile)) {
+            return;
+        }
 
         $submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Đang thêm...');
 
@@ -58,17 +121,51 @@ $(document).ready(function () {
             processData: false,
             success: function (response) {
                 if (response.success) {
-                    showToast(response.message, true);
+                    showToast(response.message, 'success');
                     $('#no-variants-row').remove();
                     variantTableBody.append(response.variant_html);
                     $form[0].reset();
+                    
+                    // Scroll to new variant
+                    if (response.variant_id) {
+                        $('html, body').animate({
+                            scrollTop: $('#variant-' + response.variant_id).offset().top - 100
+                        }, 500);
+                    }
                 } else {
-                    showToast(response.message, false);
+                    // Kiểm tra type để hiển thị đúng icon
+                    let iconType = 'error';
+                    if (response.type === 'info') iconType = 'info';
+                    if (response.type === 'warning') iconType = 'warning';
+                    
+                    showToast(response.message, iconType);
+                    
+                    // Nếu có existing_id, highlight row đó
+                    if (response.existing_id) {
+                        const $existingRow = $('#variant-' + response.existing_id);
+                        if ($existingRow.length) {
+                            // Remove any existing highlights
+                            $('.variant-highlight').removeClass('variant-highlight');
+                            
+                            // Add highlight
+                            $existingRow.addClass('variant-highlight');
+                            
+                            // Scroll to existing variant
+                            $('html, body').animate({
+                                scrollTop: $existingRow.offset().top - 100
+                            }, 500);
+                            
+                            // Remove highlight after 3 seconds
+                            setTimeout(() => {
+                                $existingRow.removeClass('variant-highlight');
+                            }, 3000);
+                        }
+                    }
                 }
             },
             error: function (jqXHR) {
                 const errorMsg = jqXHR.responseJSON?.message || 'Lỗi không xác định. Vui lòng thử lại.';
-                showToast(errorMsg, false);
+                showToast(errorMsg, 'error');
                 console.error('Error:', jqXHR.responseText);
             },
             complete: function () {
@@ -79,12 +176,13 @@ $(document).ready(function () {
 
     // === MỞ MODAL SỬA BIẾN THỂ ===
     $(document).on('click', '.btn-edit-variant', function () {
-        const id = $(this).data('id');
-        const color = $(this).data('color');
-        const storage = $(this).data('storage');
-        const price = $(this).data('price');
-        const stock = $(this).data('stock');
-        const imageUrl = $(this).data('image_url') || '';
+        const $btn = $(this);
+        const id = $btn.data('id');
+        const color = $btn.data('color');
+        const storage = $btn.data('storage');
+        const price = $btn.data('price');
+        const stock = $btn.data('stock');
+        const imageUrl = $btn.data('image_url') || '';
 
         // Điền dữ liệu vào form
         $('#edit-variant-id').val(id);
@@ -94,8 +192,8 @@ $(document).ready(function () {
         $('#edit-variant-stock').val(stock);
 
         // Set color circle
-        const colorHex = colorMap[color] || '#FFFFFF';
-        const border = (colorHex === '#FFFFFF') ? 'border: 1px solid #ccc;' : '';
+        const colorHex = colorMap[color] || '#CCCCCC';
+        const border = (colorHex === '#FFFFFF' || colorHex === '#CCCCCC') ? 'border: 1px solid #ccc;' : '';
         $('#edit-variant-color-circle').css({
             'background-color': colorHex,
             'border': border ? '1px solid #ccc' : 'none'
@@ -104,20 +202,53 @@ $(document).ready(function () {
         // Display current image
         if (imageUrl) {
             $('#current-variant-image').html(`
-                <img src="${imageUrl}" alt="Variant Image" style="max-width: 200px; max-height: 200px; border-radius: 8px;">
+                <img src="${imageUrl}" alt="Variant Image" 
+                     class="img-fluid" 
+                     style="max-width: 200px; max-height: 200px; border-radius: 8px; object-fit: cover;">
             `);
         } else {
             $('#current-variant-image').html(`
-                <i class="fas fa-image fa-3x text-muted"></i>
+                <div class="text-center p-3 bg-light rounded">
+                    <i class="fas fa-image fa-3x text-muted"></i>
+                    <p class="text-muted mt-2 mb-0">Chưa có ảnh</p>
+                </div>
             `);
         }
 
         // Reset file input and preview
         $('#edit-variant-image').val('');
-        $('#new-variant-image-preview').hide();
+        $('#new-variant-image-preview').hide().html('');
 
         // Mở modal
         editVariantModal.show();
+    });
+
+    // === PREVIEW ẢNH KHI CHỌN FILE (EDIT MODAL) ===
+    $('#edit-variant-image').on('change', function () {
+        const file = this.files[0];
+        const $preview = $('#new-variant-image-preview');
+        
+        if (file) {
+            if (!validateImageFile(file)) {
+                $(this).val('');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                $preview.html(`
+                    <div class="mt-3">
+                        <p class="text-muted mb-2"><strong>Ảnh mới:</strong></p>
+                        <img src="${e.target.result}" 
+                             class="img-fluid" 
+                             style="max-width: 200px; max-height: 200px; border-radius: 8px; object-fit: cover;">
+                    </div>
+                `).show();
+            };
+            reader.readAsDataURL(file);
+        } else {
+            $preview.hide().html('');
+        }
     });
 
     // === SUBMIT FORM SỬA BIẾN THỂ ===
@@ -127,16 +258,33 @@ $(document).ready(function () {
         const $submitButton = $form.find('button[type="submit"]');
         const originalButtonHtml = $submitButton.html();
 
+        const variantId = $('#edit-variant-id').val();
+        const newPriceVal = parseFloat($('#edit-variant-price').val());
+        const newStockVal = parseInt($('#edit-variant-stock').val());
+
+        // Validate
+        if (isNaN(newPriceVal) || newPriceVal <= 0) {
+            showToast('Giá không hợp lệ!', 'error');
+            return;
+        }
+
+        if (isNaN(newStockVal) || newStockVal < 0) {
+            showToast('Tồn kho không hợp lệ!', 'error');
+            return;
+        }
+
+        // Validate image if exists
+        const imageFile = $('#edit-variant-image')[0]?.files[0];
+        if (imageFile && !validateImageFile(imageFile)) {
+            return;
+        }
+
         $submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Đang lưu...');
 
         const formData = new FormData(this);
         formData.append('controller', 'variant');
         formData.append('action', 'ajax_update');
         formData.append('product_id', productId);
-
-        const variantId = $('#edit-variant-id').val();
-        const newPriceVal = $('#edit-variant-price').val();
-        const newStockVal = $('#edit-variant-stock').val();
 
         $.ajax({
             url: SITE_URL,
@@ -147,7 +295,7 @@ $(document).ready(function () {
             processData: false,
             success: function (response) {
                 if (response.success) {
-                    showToast(response.message, true);
+                    showToast(response.message, 'success');
                     editVariantModal.hide();
 
                     // Cập nhật giá và tồn kho
@@ -162,19 +310,26 @@ $(document).ready(function () {
 
                     // Cập nhật data attributes
                     const $editButton = $('.btn-edit-variant[data-id="' + variantId + '"]');
-                    $editButton.data('price', newPriceVal);
-                    $editButton.data('stock', newStockVal);
+                    $editButton.attr('data-price', newPriceVal);
+                    $editButton.attr('data-stock', newStockVal);
                     if (response.image_url) {
-                        $editButton.data('image_url', response.image_url);
+                        $editButton.attr('data-image_url', response.image_url);
                     }
 
+                    // Highlight updated row
+                    const $row = $('#variant-' + variantId);
+                    $row.addClass('table-success');
+                    setTimeout(() => {
+                        $row.removeClass('table-success');
+                    }, 2000);
+
                 } else {
-                    showToast(response.message, false);
+                    showToast(response.message, 'error');
                 }
             },
             error: function (jqXHR) {
                 const errorMsg = jqXHR.responseJSON?.message || 'Lỗi không xác định.';
-                showToast(errorMsg, false);
+                showToast(errorMsg, 'error');
                 console.error('Error:', jqXHR.responseText);
             },
             complete: function () {
@@ -191,15 +346,25 @@ $(document).ready(function () {
 
         Swal.fire({
             title: 'Bạn có chắc không?',
-            text: `Bạn sắp xóa biến thể "${variantName}". Hành động này không thể hoàn tác!`,
+            html: `Bạn sắp xóa biến thể <strong>"${variantName}"</strong><br>Hành động này không thể hoàn tác!`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Đồng ý, xóa nó!',
-            cancelButtonText: 'Hủy'
+            confirmButtonText: '<i class="fas fa-trash"></i> Đồng ý, xóa!',
+            cancelButtonText: '<i class="fas fa-times"></i> Hủy',
+            reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
+                // Show loading
+                Swal.fire({
+                    title: 'Đang xóa...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
                 $.ajax({
                     url: SITE_URL,
                     type: 'POST',
@@ -212,17 +377,21 @@ $(document).ready(function () {
                     dataType: 'json',
                     success: function (response) {
                         if (response.success) {
-                            showToast(response.message, true);
+                            Swal.close();
+                            showToast(response.message, 'success');
+                            
                             $('#variant-' + variantId).fadeOut(500, function () {
                                 $(this).remove();
-                                if ($('#variant-table-body tr').length === 0) {
+                                
+                                // Kiểm tra nếu không còn variant nào
+                                if ($('#variant-table-body tr:visible').length === 0) {
                                     $('#variant-table-body').html(`
                                         <tr id="no-variants-row">
                                             <td colspan="7" class="text-center py-5">
                                                 <div class="empty-state">
-                                                    <i class="fas fa-box"></i>
+                                                    <i class="fas fa-box fa-3x text-muted mb-3"></i>
                                                     <h5>Chưa có biến thể nào</h5>
-                                                    <p>Hãy thêm biến thể mới ở form bên trên</p>
+                                                    <p class="text-muted">Hãy thêm biến thể mới ở form bên trên</p>
                                                 </div>
                                             </td>
                                         </tr>
@@ -230,12 +399,15 @@ $(document).ready(function () {
                                 }
                             });
                         } else {
-                            showToast(response.message, false);
+                            Swal.close();
+                            showToast(response.message, 'error');
                         }
                     },
                     error: function (jqXHR) {
+                        Swal.close();
                         const errorMsg = jqXHR.responseJSON?.message || 'Lỗi không thể xóa.';
-                        showToast(errorMsg, false);
+                        showToast(errorMsg, 'error');
+                        console.error('Error:', jqXHR.responseText);
                     }
                 });
             }
@@ -243,6 +415,29 @@ $(document).ready(function () {
     });
 
     // ========== IMAGE MANAGEMENT ==========
+
+    // === PREVIEW ẢNH KHI CHỌN FILE ===
+    $('#image_url').on('change', function () {
+        const file = this.files[0];
+        const $formText = $(this).next('.form-text');
+        
+        if (file) {
+            if (!validateImageFile(file)) {
+                $(this).val('');
+                $formText.html('<i class="fas fa-exclamation-triangle text-danger"></i> File không hợp lệ');
+                return;
+            }
+
+            const fileName = file.name;
+            const fileSize = (file.size / 1024 / 1024).toFixed(2);
+            $formText.html(`
+                <i class="fas fa-file-image text-success"></i> 
+                <strong>${fileName}</strong> (${fileSize} MB)
+            `);
+        } else {
+            $formText.html('Chọn file ảnh (JPG, PNG, GIF, WEBP - Max 5MB)');
+        }
+    });
 
     // === UPLOAD ẢNH ===
     $('#image-form').on('submit', function (e) {
@@ -253,13 +448,14 @@ $(document).ready(function () {
         const originalButtonHtml = $submitButton.html();
 
         const fileInput = $('#image_url')[0];
+        
         if (!fileInput.files || fileInput.files.length === 0) {
-            showToast('Vui lòng chọn ảnh!', false);
+            showToast('Vui lòng chọn ảnh!', 'error');
             return;
         }
 
-        if (fileInput.files[0].size > 5 * 1024 * 1024) {
-            showToast('File ảnh không được vượt quá 5MB!', false);
+        const file = fileInput.files[0];
+        if (!validateImageFile(file)) {
             return;
         }
 
@@ -276,18 +472,26 @@ $(document).ready(function () {
             processData: false,
             success: function (response) {
                 if (response.success) {
-                    showToast(response.message, true);
+                    showToast(response.message, 'success');
                     $('#no-images-row').remove();
                     imageGallery.append(response.image_html);
                     $form[0].reset();
-                    $form.find('.form-text').html('Chọn file ảnh (JPG, PNG, GIF, WEBP - Max 5MB)');
+                    $('#image_url').next('.form-text').html('Chọn file ảnh (JPG, PNG, GIF, WEBP - Max 5MB)');
+                    
+                    // Scroll to new image
+                    if (response.image_id) {
+                        $('html, body').animate({
+                            scrollTop: $('#image-item-' + response.image_id).offset().top - 100
+                        }, 500);
+                    }
                 } else {
-                    showToast(response.message, false);
+                    showToast(response.message, 'error');
                 }
             },
             error: function (jqXHR) {
                 const errorMsg = jqXHR.responseJSON?.message || 'Upload thất bại!';
-                showToast(errorMsg, false);
+                showToast(errorMsg, 'error');
+                console.error('Error:', jqXHR.responseText);
             },
             complete: function () {
                 $submitButton.prop('disabled', false).html(originalButtonHtml);
@@ -308,10 +512,20 @@ $(document).ready(function () {
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Xóa',
-            cancelButtonText: 'Hủy'
+            confirmButtonText: '<i class="fas fa-trash"></i> Xóa',
+            cancelButtonText: '<i class="fas fa-times"></i> Hủy',
+            reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
+                // Show loading
+                Swal.fire({
+                    title: 'Đang xóa...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
                 $.ajax({
                     url: SITE_URL,
                     type: 'POST',
@@ -324,48 +538,78 @@ $(document).ready(function () {
                     },
                     success: function (response) {
                         if (response.success) {
-                            showToast(response.message, true);
+                            Swal.close();
+                            showToast(response.message, 'success');
+                            
                             $imageItem.fadeOut(400, function () {
                                 $(this).remove();
+                                
+                                // Kiểm tra nếu không còn ảnh nào
                                 if ($('#image-gallery .image-item').length === 0) {
                                     $('#image-gallery').html(`
                                         <div class="col-12 text-center py-5" id="no-images-row">
                                             <div class="empty-state">
-                                                <i class="fas fa-images"></i>
+                                                <i class="fas fa-images fa-3x text-muted mb-3"></i>
                                                 <h5>Chưa có ảnh nào</h5>
-                                                <p>Hãy upload ảnh mới ở form bên trên</p>
+                                                <p class="text-muted">Hãy upload ảnh mới ở form bên trên</p>
                                             </div>
                                         </div>
                                     `);
                                 }
                             });
                         } else {
-                            showToast(response.message, false);
+                            Swal.close();
+                            showToast(response.message, 'error');
                         }
                     },
                     error: function (xhr) {
+                        Swal.close();
                         const response = xhr.responseJSON;
-                        showToast(response?.message || 'Xóa thất bại!', false);
+                        showToast(response?.message || 'Xóa thất bại!', 'error');
+                        console.error('Error:', xhr.responseText);
                     }
                 });
             }
         });
     });
 
-    // ========== FILE INPUT PREVIEW ==========
-    $('#image_url').on('change', function () {
-        const file = this.files[0];
-        if (file) {
-            const fileName = file.name;
-            const fileSize = (file.size / 1024 / 1024).toFixed(2);
-            $(this).next('.form-text').html(`
-                <i class="fas fa-file-image text-success"></i> 
-                ${fileName} (${fileSize} MB)
-            `);
-        } else {
-            $(this).next('.form-text').html('Chọn file ảnh (JPG, PNG, GIF, WEBP - Max 5MB)');
+    // ========== FORM VALIDATION ==========
+    
+    // Prevent negative numbers in number inputs
+    $('input[type="number"]').on('keypress', function (e) {
+        if (e.which === 45) { // Minus sign
+            e.preventDefault();
         }
     });
 
-    console.log('✅ Edit Product Page (Modal + Image Upload) Initialized');
+    // Format price input on blur
+    $('input[name="price"], #edit-variant-price').on('blur', function () {
+        const val = parseFloat($(this).val());
+        if (!isNaN(val) && val > 0) {
+            $(this).val(val.toFixed(0));
+        }
+    });
+
+    // Format stock input on blur
+    $('input[name="stock"], #edit-variant-stock').on('blur', function () {
+        const val = parseInt($(this).val());
+        if (!isNaN(val) && val >= 0) {
+            $(this).val(val);
+        }
+    });
+
+    // ========== KEYBOARD SHORTCUTS ==========
+    
+    $(document).on('keydown', function (e) {
+        // ESC to close modal
+        if (e.key === 'Escape' && editVariantModal._isShown) {
+            editVariantModal.hide();
+        }
+    });
+
+    // ========== INITIALIZATION ==========
+    
+    console.log('✅ Edit Product Page Initialized');
+    console.log('📦 Product ID:', productId);
+    console.log('🎨 Color Map:', Object.keys(colorMap).length, 'colors loaded');
 });

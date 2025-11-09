@@ -231,13 +231,22 @@ $(document).ready(function() {
     const fileInfo = $('#file-info');
     const fileName = $('#file-name');
     const fileSize = $('#file-size');
+    const btnSelectFile = $('.btn.btn-primary-modern');
 
-    // Click to select file
-    uploadArea.on('click', function() {
+    // Click chọn file bằng button
+    btnSelectFile.on('click', function(e) {
+        e.stopPropagation(); // ngăn click bubble lên uploadArea
         fileInput.click();
     });
 
-    // File selected
+    // Click vùng upload (không bao gồm button)
+    uploadArea.on('click', function(e) {
+        if (e.target === this) {
+            fileInput.click();
+        }
+    });
+
+    // File được chọn
     fileInput.on('change', function() {
         const file = this.files[0];
         if (file) {
@@ -262,7 +271,7 @@ $(document).ready(function() {
         e.preventDefault();
         e.stopPropagation();
         $(this).removeClass('dragover');
-        
+
         const files = e.originalEvent.dataTransfer.files;
         if (files.length > 0) {
             fileInput[0].files = files;
@@ -270,23 +279,23 @@ $(document).ready(function() {
         }
     });
 
-    // Display file info
+    // Hiển thị thông tin file
     function displayFileInfo(file) {
         const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-        
-        // Validate file type
+
+        // Kiểm tra định dạng
         const validTypes = [
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'application/vnd.ms-excel'
         ];
-        
+
         if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls)$/)) {
             alert('Vui lòng chọn file Excel (.xlsx hoặc .xls)');
             clearFile();
             return;
         }
 
-        // Validate file size (max 10MB)
+        // Kiểm tra dung lượng
         if (file.size > 10 * 1024 * 1024) {
             alert('File không được vượt quá 10MB');
             clearFile();
@@ -299,25 +308,23 @@ $(document).ready(function() {
         uploadArea.hide();
     }
 
-    // Clear file
+    // Xóa file
     window.clearFile = function() {
         fileInput.val('');
         fileInfo.addClass('d-none');
         uploadArea.show();
     };
 
-    // Preview button (optional - requires additional implementation)
+    // Preview (chưa triển khai)
     $('#btn-preview').on('click', function() {
         if (!fileInput[0].files || fileInput[0].files.length === 0) {
             alert('Vui lòng chọn file trước!');
             return;
         }
-        
-        // TODO: Implement preview functionality with AJAX
         alert('Chức năng preview đang được phát triển...');
     });
 
-    // Form submit validation
+    // Submit form
     $('#import-form').on('submit', function(e) {
         if (!fileInput[0].files || fileInput[0].files.length === 0) {
             e.preventDefault();
@@ -325,7 +332,7 @@ $(document).ready(function() {
             return false;
         }
 
-        // Show loading
+        // Hiển thị loading
         const submitBtn = $(this).find('button[type="submit"]');
         submitBtn.prop('disabled', true)
                  .html('<i class="fas fa-spinner fa-spin"></i> Đang import...');

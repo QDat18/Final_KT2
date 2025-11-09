@@ -411,7 +411,6 @@ switch ($action) {
         $file_tmp_path = $_FILES['excel_file']['tmp_name'];
 
         // Get options
-        $update_existing = isset($_POST['update_existing']);
         $skip_errors = isset($_POST['skip_errors']);
         $create_log = isset($_POST['create_log']);
 
@@ -422,26 +421,21 @@ switch ($action) {
 
             // Statistics
             $stats = [
-                'total_rows' => count($rows) - 1, // Trừ header
+                'total_rows' => count($rows) - 1,
                 'products_created' => 0,
-                'products_updated' => 0,
                 'variants_created' => 0,
-                'variants_updated' => 0,
-                'errors' => [],
-                'skipped_rows' => 0
+                'skipped_rows' => 0,
+                'errors' => []
             ];
 
-            // Remove header row
-            array_shift($rows);
+            array_shift($rows); // Bỏ header
 
-            // Start transaction
             $db->beginTransaction();
 
             foreach ($rows as $index => $row) {
-                $row_number = $index + 2; // +2 because: +1 for array index, +1 for header row
-
+                $row_number = $index + 2; // +1 header +1 index
                 try {
-                    // Validate required fields
+                    // Lấy dữ liệu từng cột
                     $product_sku = trim($row[0] ?? '');
                     $product_name = trim($row[1] ?? '');
                     $product_desc = trim($row[2] ?? '');
@@ -450,61 +444,36 @@ switch ($action) {
                     $variant_price = floatval($row[5] ?? 0);
                     $variant_stock = intval($row[6] ?? 0);
 
-                    // Skip empty rows
-                    if (empty($product_sku) && empty($product_name)) {
-                        continue;
-                    }
+                    // Bỏ qua dòng trống
+                    if (empty($product_sku) && empty($product_name)) continue;
 
-                    // Validate required fields
-                    if (empty($product_sku)) {
-                        throw new Exception("Product SKU không được để trống");
-                    }
-                    if (empty($product_name)) {
-                        throw new Exception("Product Name không được để trống");
-                    }
-                    if (empty($variant_color)) {
-                        throw new Exception("Variant Color không được để trống");
-                    }
-                    if (empty($variant_storage)) {
-                        throw new Exception("Variant Storage không được để trống");
-                    }
-                    if ($variant_price <= 0) {
-                        throw new Exception("Variant Price phải lớn hơn 0");
-                    }
-                    if ($variant_stock < 0) {
-                        throw new Exception("Variant Stock phải >= 0");
-                    }
+                    // Kiểm tra dữ liệu bắt buộc
+                    if (empty($product_sku)) throw new Exception("Product SKU không được để trống");
+                    if (empty($product_name)) throw new Exception("Product Name không được để trống");
+                    if (empty($variant_color)) throw new Exception("Variant Color không được để trống");
+                    if (empty($variant_storage)) throw new Exception("Variant Storage không được để trống");
+                    if ($variant_price <= 0) throw new Exception("Variant Price phải > 0");
+                    if ($variant_stock < 0) throw new Exception("Variant Stock phải >= 0");
 
-                    // 1. Find or Create Product
-                    $product_id = null;
+                    // === 1. Kiểm tra sản phẩm ===
                     $product = $productModel->findBySKU($product_sku);
-
                     if ($product) {
+                        // Đã có -> bỏ qua (không cập nhật)
                         $product_id = $product['id'];
-
-                        // Update product if needed and option enabled
-                        if (
-                            $update_existing &&
-                            ($product['name'] != $product_name || $product['description'] != $product_desc)
-                        ) {
-                            $productModel->update([
-                                'id' => $product_id,
-                                'sku' => $product_sku,
-                                'name' => $product_name,
-                                'description' => $product_desc,
-                                'image' => $product['image']
-                            ]);
-                            $stats['products_updated']++;
-                        }
+                        $stats['errors'][] = [
+                            'row' => $row_number,
+                            'message' => "Sản phẩm {$product_sku} đã tồn tại (bỏ qua)",
+                            'data' => ['sku' => $product_sku, 'name' => $product_name]
+                        ];
+                        $stats['skipped_rows']++;
                     } else {
-                        // Create new product
+                        // Tạo sản phẩm mới
                         $productData = [
                             'sku' => $product_sku,
                             'name' => $product_name,
                             'description' => $product_desc,
                             'image' => ''
                         ];
-
                         if ($productModel->create($productData)) {
                             $product_id = $db->lastInsertId();
                             $stats['products_created']++;
@@ -513,44 +482,32 @@ switch ($action) {
                         }
                     }
 
-                    // 2. Generate variant SKU
+                    // === 2. Sinh SKU cho biến thể ===
                     $color_slug = ucfirst(strtolower($variant_color));
-                    preg_match('/(\d+)/', $variant_storage, $matches);
-                    $storage_slug = $matches[1] ?? str_replace(' ', '', $variant_storage);
-                    $generated_sku = $product_sku . '-' . $color_slug . '-' . $storage_slug;
+                    $storage_slug = str_replace(' ', '', $variant_storage);
+                    $variant_sku = $product_sku . '-' . $color_slug . '-' . $storage_slug;
 
-                    // 3. Find or Create Variant
-                    $variant = $variantModel->findBySKU($generated_sku);
-
-                    $variantData = [
-                        'product_id' => $product_id,
-                        'sku' => $generated_sku,
-                        'color' => $variant_color,
-                        'storage' => $variant_storage,
-                        'price' => $variant_price,
-                        'stock' => $variant_stock,
-                        'image' => ''
-                    ];
-
+                    // === 3. Kiểm tra biến thể ===
+                    $variant = $variantModel->findBySKU($variant_sku);
                     if ($variant) {
-                        if ($update_existing) {
-                            $variantData['id'] = $variant['id'];
-                            $variantData['image'] = $variant['image']; // Keep existing image
-
-                            if ($variantModel->update($variantData)) {
-                                $stats['variants_updated']++;
-                            } else {
-                                throw new Exception("Không thể cập nhật biến thể");
-                            }
-                        } else {
-                            // Skip if exists and update not enabled
-                            $stats['errors'][] = [
-                                'row' => $row_number,
-                                'message' => "Biến thể {$generated_sku} đã tồn tại (bỏ qua)"
-                            ];
-                            $stats['skipped_rows']++;
-                        }
+                        // Đã có -> bỏ qua
+                        $stats['errors'][] = [
+                            'row' => $row_number,
+                            'message' => "Biến thể {$variant_sku} đã tồn tại (bỏ qua)",
+                            'data' => ['sku' => $product_sku, 'name' => $product_name]
+                        ];
+                        $stats['skipped_rows']++;
                     } else {
+                        // Tạo biến thể mới
+                        $variantData = [
+                            'product_id' => $product_id,
+                            'sku' => $variant_sku,
+                            'color' => $variant_color,
+                            'storage' => $variant_storage,
+                            'price' => $variant_price,
+                            'stock' => $variant_stock,
+                            'image' => ''
+                        ];
                         if ($variantModel->create($variantData)) {
                             $stats['variants_created']++;
                         } else {
@@ -561,15 +518,10 @@ switch ($action) {
                     $stats['errors'][] = [
                         'row' => $row_number,
                         'message' => $e->getMessage(),
-                        'data' => [
-                            'sku' => $product_sku ?? 'N/A',
-                            'name' => $product_name ?? 'N/A'
-                        ]
+                        'data' => ['sku' => $product_sku ?? 'N/A', 'name' => $product_name ?? 'N/A']
                     ];
-
                     $stats['skipped_rows']++;
 
-                    // If skip_errors is not enabled, rollback and stop
                     if (!$skip_errors) {
                         $db->rollBack();
                         $_SESSION['error_message'] = "Import thất bại tại dòng {$row_number}: " . $e->getMessage();
@@ -579,35 +531,29 @@ switch ($action) {
                 }
             }
 
-            // Commit transaction
             $db->commit();
 
-            // Create log file if requested
+            // === Ghi log nếu cần ===
             if ($create_log && !empty($stats['errors'])) {
                 $log_dir = 'logs/imports/';
-                if (!is_dir($log_dir)) {
-                    mkdir($log_dir, 0777, true);
-                }
-
+                if (!is_dir($log_dir)) mkdir($log_dir, 0777, true);
                 $log_filename = $log_dir . 'import_' . date('Y-m-d_His') . '.log';
+
                 $log_content = "IMPORT LOG - " . date('Y-m-d H:i:s') . "\n";
                 $log_content .= str_repeat("=", 60) . "\n\n";
                 $log_content .= "THỐNG KÊ:\n";
-                $log_content .= "- Tổng số dòng: {$stats['total_rows']}\n";
-                $log_content .= "- Sản phẩm mới: {$stats['products_created']}\n";
-                $log_content .= "- Sản phẩm cập nhật: {$stats['products_updated']}\n";
-                $log_content .= "- Biến thể mới: {$stats['variants_created']}\n";
-                $log_content .= "- Biến thể cập nhật: {$stats['variants_updated']}\n";
-                $log_content .= "- Dòng bỏ qua: {$stats['skipped_rows']}\n";
+                $log_content .= "- Tổng dòng: {$stats['total_rows']}\n";
+                $log_content .= "- Tạo sản phẩm: {$stats['products_created']}\n";
+                $log_content .= "- Tạo biến thể: {$stats['variants_created']}\n";
+                $log_content .= "- Bỏ qua: {$stats['skipped_rows']}\n";
                 $log_content .= "- Lỗi: " . count($stats['errors']) . "\n\n";
 
                 if (!empty($stats['errors'])) {
-                    $log_content .= "CHI TIẾT LỖI:\n";
-                    $log_content .= str_repeat("-", 60) . "\n";
-                    foreach ($stats['errors'] as $error) {
-                        $log_content .= "Dòng {$error['row']}: {$error['message']}\n";
-                        if (isset($error['data'])) {
-                            $log_content .= "  SKU: {$error['data']['sku']}, Tên: {$error['data']['name']}\n";
+                    $log_content .= "CHI TIẾT LỖI:\n" . str_repeat("-", 60) . "\n";
+                    foreach ($stats['errors'] as $err) {
+                        $log_content .= "Dòng {$err['row']}: {$err['message']}\n";
+                        if (isset($err['data'])) {
+                            $log_content .= "  SKU: {$err['data']['sku']} - {$err['data']['name']}\n";
                         }
                         $log_content .= "\n";
                     }
@@ -616,35 +562,21 @@ switch ($action) {
                 file_put_contents($log_filename, $log_content);
             }
 
-            // Build success message
-            $success_msg = "Import hoàn tất! ";
-            $success_msg .= "Tạo mới: {$stats['products_created']} sản phẩm, {$stats['variants_created']} biến thể. ";
+            // === Thông báo kết quả ===
+            $msg = "Import hoàn tất! Tạo mới: {$stats['products_created']} sản phẩm, {$stats['variants_created']} biến thể. ";
+            if ($stats['skipped_rows'] > 0) $msg .= "Bỏ qua: {$stats['skipped_rows']} dòng. ";
+            if ($create_log && !empty($stats['errors'])) $msg .= "File log: {$log_filename}";
 
-            if ($stats['products_updated'] > 0 || $stats['variants_updated'] > 0) {
-                $success_msg .= "Cập nhật: {$stats['products_updated']} sản phẩm, {$stats['variants_updated']} biến thể. ";
-            }
-
-            if ($stats['skipped_rows'] > 0) {
-                $success_msg .= "Bỏ qua: {$stats['skipped_rows']} dòng. ";
-            }
-
-            if ($create_log && !empty($stats['errors'])) {
-                $success_msg .= "File log: {$log_filename}";
-            }
-
-            $_SESSION['success_message'] = $success_msg;
-
-            // Store detailed stats in session for display
+            $_SESSION['success_message'] = $msg;
             $_SESSION['import_stats'] = $stats;
         } catch (Exception $e) {
-            if ($db->inTransaction()) {
-                $db->rollBack();
-            }
+            if ($db->inTransaction()) $db->rollBack();
             $_SESSION['error_message'] = "Import thất bại: " . $e->getMessage();
         }
 
         header("Location: index.php?controller=product&action=import_result");
         break;
+
 
     case 'import_result':
         // Display import results
