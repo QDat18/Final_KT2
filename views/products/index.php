@@ -55,6 +55,34 @@
     </div>
 </div>
 
+<div class="modal fade" id="productDetailModal" tabindex="-1" aria-labelledby="productDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="productDetailModalLabel">
+                    <i class="fas fa-eye"></i> Chi tiết sản phẩm
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="product-detail-content" style="background-color: #f8f9fa;">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Đang tải...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
+                <a href="#" id="modal-edit-button" class="btn btn-primary-modern">
+                    <i class="fas fa-edit"></i> Chỉnh sửa sản phẩm
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modern-card fade-in" style="animation-delay: 0.1s;">
     <div class="card-header-modern">
         <h5><i class="fas fa-list"></i> Danh sách sản phẩm</h5>
@@ -112,13 +140,13 @@
             <table class="table table-modern">
                 <thead>
                     <tr>
-                        <th style="width: 80px;">Ảnh</th>
-                        <th style="width: 120px;">SKU</th>
+                        <th style="width: 80px;text-align: center;">Ảnh</th>
+                        <th style="width: 120px;text-align: center;">SKU</th>
                         <th>Tên sản phẩm</th>
-                        <th style="width: 180px;">Giá (Min-Max)</th>
+                        <th style="width: 250px;text-align: center;">Giá (Min-Max)</th>
                         <th style="width: 120px;">Tồn kho</th>
-                        <th style="width: 120px;">Ngày tạo</th>
-                        <th style="width: 200px;">Hành động</th>
+                        <th style="width: 120px;text-align: center;">Ngày tạo</th>
+                        <th style="width: 280px; text-align: center;">Hành động</th>
                     </tr>
                 </thead>
                 <tbody id="product-table-body">
@@ -137,3 +165,121 @@
         </nav>
     </div>
 </div>
+
+<script>
+$(document).ready(function() {
+    // ... (code AJAX load sản phẩm của bạn ở đây) ...
+
+    // --- SCRIPT CHO MODAL XEM CHI TIẾT ---
+    
+    // 1. Lấy đối tượng Modal
+    const modalElement = document.getElementById('productDetailModal');
+    const modalBody = $('#product-detail-content');
+    const modalEditButton = $('#modal-edit-button');
+
+    // 2. Lắng nghe sự kiện "trước khi" modal được hiển thị
+    modalElement.addEventListener('show.bs.modal', function (event) {
+        
+        // Nút đã kích hoạt modal
+        const button = event.relatedTarget; 
+        
+        // Lấy ID sản phẩm từ data-id của nút
+        const productId = button.getAttribute('data-id');
+        
+        // Tạo link cho nút "Chỉnh sửa"
+        const editUrl = `index.php?controller=product&action=edit&id=${productId}`;
+        modalEditButton.attr('href', editUrl);
+
+        // Hiển thị loading spinner
+        modalBody.html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Đang tải...</span></div></div>');
+
+        // 3. Gọi AJAX để lấy chi tiết
+        $.ajax({
+            url: 'index.php?controller=product&action=ajax_get_details',
+            type: 'GET',
+            data: { id: productId },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Xây dựng HTML từ data trả về
+                    buildModalContent(response.product, response.variants);
+                } else {
+                    modalBody.html(`<div class="alert alert-danger m-3">Lỗi: ${response.message}</div>`);
+                }
+            },
+            error: function() {
+                modalBody.html('<div class="alert alert-danger m-3">Lỗi: Không thể tải dữ liệu. Vui lòng thử lại.</div>');
+            }
+        });
+    });
+
+    // 4. Hàm xây dựng HTML cho nội dung modal
+    function buildModalContent(product, variants) {
+        // --- Box sản phẩm cha ---
+        let productHtml = `
+            <div class="modern-card mb-4">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3 text-center">
+                            <img src="${product.image || 'assets/images/default-product.png'}" 
+                                 class="img-fluid rounded shadow-sm" 
+                                 alt="${product.name}" 
+                                 style="max-height: 150px; object-fit: cover;">
+                        </div>
+                        <div class="col-md-9">
+                            <h4 class="mb-2">${product.name}</h4>
+                            <span class="badge bg-secondary fs-6 mb-3">${product.sku}</span>
+                            <p class="text-muted small">
+                                ${product.description || 'Chưa có mô tả.'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // --- Box danh sách biến thể ---
+        let variantsHtml = `
+            <div class="modern-card">
+                <div class="card-header-modern">
+                    <h5><i class="fas fa-boxes"></i> Danh sách biến thể</h5>
+                    <span class="badge bg-light text-dark">${variants.length} biến thể</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Màu</th>
+                                    <th>Dung lượng</th>
+                                    <th>Giá</th>
+                                    <th>Tồn kho</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+        `;
+
+        if (variants.length > 0) {
+            variants.forEach(v => {
+                const price = new Intl.NumberFormat('vi-VN').format(v.price);
+                const stock = new Intl.NumberFormat('vi-VN').format(v.stock);
+                variantsHtml += `
+                    <tr>
+                        <td>${v.color}</td>
+                        <td>${v.storage}</td>
+                        <td>${price} đ</td>
+                        <td>${stock}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            variantsHtml += '<tr><td colspan="4" class="text-center p-3">Chưa có biến thể nào.</td></tr>';
+        }
+
+        variantsHtml += '</tbody></table></div></div></div>';
+
+        // Gắn HTML vào modal
+        modalBody.html(productHtml + variantsHtml);
+    }
+});
+</script>

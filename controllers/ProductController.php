@@ -44,6 +44,8 @@ switch ($action) {
                             <td>' . $createdDate . '</td>
                             <td>
                                 <div class="action-buttons">
+                                    <button type="button" class="btn btn-info-modern btn-action btn-view-product" data-bs-toggle="modal" data-bs-target="#productDetailModal" data-id="' . $row['id'] . '"> <i class="fas fa-eye"></i> Xem
+                                    </button>
                                     <a href="index.php?controller=product&action=edit&id=' . $row['id'] . '" 
                                        class="btn btn-warning-modern btn-action">
                                         <i class="fas fa-edit"></i> Sửa
@@ -143,6 +145,40 @@ switch ($action) {
             echo json_encode([
                 'success' => false,
                 'message' => 'Lỗi: ' . $e->getMessage()
+            ]);
+        }
+        exit;
+
+        // ========== AJAX Details =========
+    case 'ajax_get_details':
+        header('Content-Type: application/json');
+
+        try {
+            $id = (int)($_GET['id'] ?? 0);
+            if ($id === 0) {
+                throw new Exception('ID sản phẩm không hợp lệ');
+            }
+
+            // 1. Lấy thông tin sản phẩm cha
+            $product = $productModel->getByID($id);
+            if (!$product) {
+                throw new Exception('Không tìm thấy sản phẩm');
+            }
+
+            // 2. Lấy tất cả biến thể
+            $variants = $variantModel->getByProductID($id);
+
+            // 3. Trả về JSON
+            echo json_encode([
+                'success' => true,
+                'product' => $product,
+                'variants' => $variants
+            ]);
+        } catch (Exception $e) {
+            http_response_code(404);
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
             ]);
         }
         exit;
