@@ -168,10 +168,7 @@
 
 <script>
 $(document).ready(function() {
-    // ... (code AJAX load sản phẩm của bạn ở đây) ...
 
-    // --- SCRIPT CHO MODAL XEM CHI TIẾT ---
-    
     // 1. Lấy đối tượng Modal
     const modalElement = document.getElementById('productDetailModal');
     const modalBody = $('#product-detail-content');
